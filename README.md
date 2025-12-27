@@ -1,57 +1,66 @@
-📑 S3 & RDS Document Manager
+# 📑 S3 & RDS Document Manager
 
-Este projeto foi desenvolvido como um laboratório prático para consolidar conhecimentos em AWS Cloud Computing, integrando serviços de armazenamento de objetos, banco de dados gerenciado e segurança de acesso.
+Este projeto foi desenvolvido como um laboratório prático para consolidar conhecimentos em **AWS Cloud Computing**, integrando serviços de armazenamento de objetos, banco de dados gerenciado e segurança de acesso.
 
-O objetivo principal foi criar um fluxo completo de gerenciamento de documentos (Upload, Listagem e Visualização) utilizando as melhores práticas da AWS.
-🚀 Tecnologias e Serviços Utilizados
+O foco técnico foi garantir uma arquitetura escalável, segura e um ambiente de desenvolvimento robusto, simulando um cenário real de engenharia de software.
 
-    AWS S3 (Simple Storage Service): Armazenamento escalável para os arquivos.
+---
 
-    AWS RDS (Relational Database Service): Banco de dados MySQL gerenciado para persistência de metadados.
+## 🚀 Tecnologias e Serviços Utilizados
 
-    PHP 7.4+: Lógica de backend e integração com AWS SDK.
+* **AWS S3 (Simple Storage Service):** Armazenamento de arquivos com alta disponibilidade e escalabilidade.
+* **AWS RDS (Relational Database Service):** Banco de dados MySQL gerenciado para persistência de metadados.
+* **PHP 7.2 (Ubuntu 18.04):** Backend robusto integrado ao **AWS SDK for PHP**.
+* **Docker & Docker Compose:** Containerização completa da Stack (Apache/PHP), garantindo paridade entre ambientes.
+* **AWS Signature Version 4:** Implementação de URLs pré-assinadas (Presigned URLs) para controle de acesso granular.
+* **Xdebug:** Ambiente configurado para depuração avançada dentro de containers via VS Code.
 
-    Docker & Docker Compose: Containerização completa do ambiente de desenvolvimento.
+---
 
-    AWS Signature Version 4: Implementação de URLs pré-assinadas para acesso seguro.
+## 🛠️ Decisões de Arquitetura & Segurança
 
-🛠️ Decisões de Arquitetura & Segurança
-1. Segurança via Presigned URLs
+### 1. Segurança via Presigned URLs
 
-Os arquivos no S3 não estão públicos. Para garantir a segurança dos documentos, o sistema gera uma URL Pré-assinada com validade de 5 minutos sempre que um usuário solicita a visualização. Isso garante que o link expire e não possa ser compartilhado indevidamente.
-2. Gestão de Variáveis de Ambiente
+Os arquivos armazenados no S3 não estão públicos. Para garantir a privacidade, o sistema utiliza o SDK da AWS para gerar uma URL temporária com validade de 5 minutos apenas no momento da solicitação. Isso mitiga riscos de compartilhamento indevido e acesso direto aos objetos.
 
-Toda a configuração sensível (Credentials, Endpoints e DB pass) é injetada via variáveis de ambiente (.env), seguindo os princípios do The Twelve-Factor App, evitando o hardcoding de segredos no código-fonte.
-3. Visualização In-App
+### 2. Gestão de Variáveis de Ambiente
 
-Utilização de um Modal dinâmico com iframe para renderização de documentos diretamente na aplicação, melhorando a experiência do usuário (UX) sem necessidade de download físico obrigatório.
+Seguindo as boas práticas do **The Twelve-Factor App**, toda a configuração sensível (Credentials, Endpoints e DB Pass) é injetada via arquivo `.env`. Isso evita o *hardcoding* de segredos no código-fonte e facilita a migração para serviços como o *AWS Secrets Manager*.
 
- *** Como rodar o projeto
+### 3. Visualização In-App e UX
 
-1. Clone o repositório:
-    git clone https://github.com/seu-usuario/seu-repositorio.git
+Utilização de um Modal dinâmico com **Bootstrap 5** e **SweetAlert2** para renderização de documentos via `iframe`. Essa abordagem melhora significativamente a experiência do usuário (UX), permitindo a conferência do arquivo sem a necessidade de downloads manuais constantes.
 
-2. Configure suas credenciais: Renomeie o arquivo .env.example para .env e preencha com suas chaves da AWS e endpoint do RDS.
+### 4. Ambiente de Desenvolvimento Profissional
 
-3. Suba os containers:
-   docker-compose up -d
-   
-4. Acesse no navegador: http://localhost:8080
+Diferente de ambientes simples, este projeto conta com **Xdebug** totalmente configurado via Docker, permitindo o uso de *breakpoints* e inspeção de variáveis em tempo real no VS Code, elevando a qualidade técnica do ciclo de desenvolvimento.
 
+---
 
- *** Autor:
-Douglas Almeida
-In: https://www.linkedin.com/in/douglasalmeidadev94/
+## 📦 Como rodar o projeto
 
+1. **Clone o repositório:**
+```bash
+git clone https://github.com/douglasalmeida21091994/aws-s3.git
 
+```
 
+2. **Configure suas credenciais:**
+Renomeie o arquivo `.env.example` para `.env` e preencha com suas chaves da AWS e endpoint do RDS.
+3. **Suba os containers:**
+```bash
+docker-compose up -d --build
 
+```
 
+4. **Acesse no navegador:**
+http://localhost:8080
 
+---
 
+## 👨‍💻 Autor
 
+**Douglas Almeida**
 
+* **LinkedIn:** https://www.linkedin.com/in/douglasalmeidadev94
 
-
-
-   

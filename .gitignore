@@ -1,1 +1,12 @@
+# Credenciais e configurações sensíveis
 .env
+
+# Configurações de IDE (VS Code)
+.vscode/
+
+# Pastas de Sistema/OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.log
