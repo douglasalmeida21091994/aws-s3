@@ -6,5 +6,10 @@ services:
       - "8080:80"
     volumes:
       - ./src:/var/www/html
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # Isso permite que o container "enxergue" VS Code
     env_file:
       - .env
+    environment:
+      # Força o Xdebug a enviar os dados para o IP do computador
+      XDEBUG_CONFIG: "remote_host=host.docker.internal"
