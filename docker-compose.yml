@@ -1,0 +1,10 @@
+services:
+  web:
+    build: .
+    container_name: php-apache-test
+    ports:
+      - "8080:80"
+    volumes:
+      - ./src:/var/www/html
+    env_file:
+      - .env
