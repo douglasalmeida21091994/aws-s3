@@ -1,12 +1,25 @@
 <?php
 header('Content-Type: application/json');
 
+// 1. Carregar variáveis de ambiente
+$path = __DIR__ . '/../.env'; 
+if (file_exists($path)) {
+    $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (strpos(trim($line), '#') === 0) continue;
+        $parts = explode('=', $line, 2);
+        if (count($parts) === 2) {
+            putenv(trim($parts[0]) . "=" . trim($parts[1]));
+        }
+    }
+}
+
 // ====== CONFIG AWS (Lendo do ambiente) ======
 $bucket    = getenv('AWS_BUCKET');
 $accessKey = getenv('AWS_ACCESS_KEY');
 $secretKey = getenv('AWS_SECRET_KEY');
 
-// ====== CONFIG AWS (Lendo do ambiente) ======
+// ====== CONFIG DB (Lendo do ambiente) ======
 $mysql_host = getenv('DB_HOST');
 $mysql_user = getenv('DB_USER');
 $mysql_pass = getenv('DB_PASS');
@@ -28,6 +41,16 @@ if (!$file || !$user_code) {
     exit;
 }
 
+// ====== VALIDAÇÃO DE TIPO (APENAS PDF) ======
+$allowed_type = 'application/pdf';
+$file_extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+
+// Verifica tanto o MIME type enviado pelo navegador quanto a extensão do arquivo
+if ($file['type'] !== $allowed_type || $file_extension !== 'pdf') {
+    echo json_encode(array('status'=>'erro','message'=>'Tipo de arquivo não permitido. Apenas PDF é aceito.'));
+    exit;
+}
+
 $random = substr(md5(uniqid()), 0, 6);
 $file_name_clean = str_replace(' ', '_', $file['name']);
 $file_key = "contratosprofissinais/" . $user_code . "_" . $random . "_" . $file_name_clean;
@@ -36,26 +59,25 @@ $file_data = file_get_contents($file['tmp_name']);
 $file_type = $file['type'];
 $file_size = $file['size'];
 
-// ====== UPLOAD S3 VIA CURL ======
-// ====== CONFIGURAÇÕES ======
+// ====== UPLOAD S3 VIA CURL (AWS SIG V4) ======
+
+
 $region = 'us-east-1'; 
 $service = 's3';
 $host = "$bucket.s3.amazonaws.com";
 $endpoint = "https://$bucket.s3.amazonaws.com/$file_key";
 
-// ====== PREPARAÇÃO DA ASSINATURA (AWS SIG V4) ======
+// Preparação da Assinatura
 $alg = 'AWS4-HMAC-SHA256';
 $date = gmdate('Ymd');
 $stamp = gmdate('Ymd\THis\Z');
 
-// 1. Cabeçalhos obrigatórios
 $headers = [
     'Host' => $host,
     'x-amz-content-sha256' => hash('sha256', $file_data),
     'x-amz-date' => $stamp,
 ];
 
-// 2. Criar a "Canonical Request"
 $canonical_headers = "";
 $signed_headers = "";
 foreach ($headers as $k => $v) {
@@ -66,21 +88,18 @@ $signed_headers = rtrim($signed_headers, ';');
 
 $canonical_request = "PUT\n/" . $file_key . "\n\n" . $canonical_headers . "\n" . $signed_headers . "\n" . hash('sha256', $file_data);
 
-// 3. String to Sign
 $scope = "$date/$region/$service/aws4_request";
 $string_to_sign = "$alg\n$stamp\n$scope\n" . hash('sha256', $canonical_request);
 
-// 4. Calcular Assinatura (Signing Key)
 $k_date = hash_hmac('sha256', $date, "AWS4" . $secretKey, true);
 $k_region = hash_hmac('sha256', $region, $k_date, true);
 $k_service = hash_hmac('sha256', $service, $k_region, true);
 $k_signing = hash_hmac('sha256', "aws4_request", $k_service, true);
 $signature = hash_hmac('sha256', $string_to_sign, $k_signing);
 
-// 5. Montar o cabeçalho Authorization
 $authorization = "$alg Credential=$accessKey/$scope, SignedHeaders=$signed_headers, Signature=$signature";
 
-// ====== EXECUÇÃO DO CURL ======
+// Execução do CURL
 $curl_headers = [
     "Authorization: $authorization",
     "x-amz-content-sha256: " . hash('sha256', $file_data),
@@ -89,11 +108,6 @@ $curl_headers = [
 ];
 
 $ch = curl_init($endpoint);
-
-// echo 'TESTE CHEGOU';
-// echo '$url' . $ch;
-// exit;
-
 curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
 curl_setopt($ch, CURLOPT_POSTFIELDS, $file_data);
 curl_setopt($ch, CURLOPT_HTTPHEADER, $curl_headers);
@@ -110,10 +124,12 @@ if ($http_code != 200) {
 }
 
 // ====== SALVA NO RDS (MySQLi) ======
+// real_escape_string para evitar SQL Injection básico nos nomes de arquivos
+$safe_file_name = $conn->real_escape_string($file['name']);
 $sql = "INSERT INTO pront_contratos_prof 
         (user_code, file_key, file_name, file_type, file_size, created_at)
         VALUES 
-        ('$user_code', '$file_key', '".$file['name']."', '$file_type', '$file_size', NOW())";
+        ('$user_code', '$file_key', '$safe_file_name', '$file_type', '$file_size', NOW())";
 
 if($conn->query($sql)) {
     echo json_encode(array('status'=>'ok'));
